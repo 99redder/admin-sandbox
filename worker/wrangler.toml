@@ -1,0 +1,18 @@
+name = "admin-sandbox-contact"
+main = "src/index.js"
+compatibility_date = "2026-02-27"
+
+[vars]
+ALLOWED_ORIGINS = "https://chrisgorham.github.io"
+TO_EMAIL = "99joefromalamo@gmail.com"
+CC_EMAIL = "officerk@agentmail.to"
+FROM_EMAIL = "noreply@easternshore.ai"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "admin-sandbox-db"
+database_id = "93da03bc-30d7-4f10-87e9-633442826397"
+
+[[r2_buckets]]
+binding = "RECEIPTS"
+bucket_name = "admin-sandbox-receipts"
