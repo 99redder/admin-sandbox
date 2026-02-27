@@ -440,6 +440,57 @@
         </div>
       </div>
 
+      <div class="admin-collapsible-card" id="advanced-accounting-card" style="margin-top:1rem;">
+        <div class="admin-collapsible-head">
+          <h3 style="margin:0;">Invoices, Recurring, Close & Tax Prep</h3>
+          <button type="button" class="btn" id="advanced-accounting-collapse-btn" aria-expanded="false">Expand</button>
+        </div>
+        <div id="advanced-accounting-body" class="admin-collapsible-body-collapsed">
+          <section class="admin-calendar-wrap" style="margin-top:.5rem; grid-column:1 / -1;">
+            <div class="admin-row" style="gap:.5rem; flex-wrap:wrap; margin-bottom:.6rem;">
+              <input id="invoice-customer-name" placeholder="Customer name" />
+              <input id="invoice-due-date" type="date" />
+              <input id="invoice-amount" type="number" step="0.01" placeholder="Amount" style="max-width:140px;" />
+              <button type="button" class="btn" id="invoice-create-btn">Quick Invoice</button>
+              <button type="button" class="btn" id="invoice-refresh-btn">Refresh A/R Aging</button>
+            </div>
+            <div id="invoice-aging-summary" class="admin-list">No A/R aging data yet.</div>
+
+            <div class="admin-row" style="gap:.5rem; flex-wrap:wrap; margin:.8rem 0 .4rem;">
+              <input id="recurring-name" placeholder="Recurring name" />
+              <select id="recurring-type" style="max-width:120px;"><option value="expense">expense</option><option value="income">income</option></select>
+              <input id="recurring-next-date" type="date" />
+              <input id="recurring-amount-cents" type="number" step="1" placeholder="Amount cents" style="max-width:140px;" />
+              <input id="recurring-category" placeholder="Category" />
+              <button type="button" class="btn" id="recurring-save-btn">Save Recurring</button>
+              <button type="button" class="btn" id="recurring-apply-btn">Apply Due Now</button>
+            </div>
+            <div id="recurring-summary" class="admin-list">No recurring data yet.</div>
+
+            <div class="admin-row" style="gap:.5rem; flex-wrap:wrap; margin:.8rem 0 .4rem;">
+              <input id="lock-start-date" type="date" />
+              <input id="lock-end-date" type="date" />
+              <input id="lock-reason" placeholder="Lock reason (optional)" />
+              <button type="button" class="btn" id="lock-add-btn">Lock Period</button>
+              <button type="button" class="btn" id="lock-refresh-btn">Refresh Locks/Checklist</button>
+            </div>
+            <div id="lock-summary" class="admin-list">No lock periods loaded.</div>
+            <div class="admin-row" style="gap:.5rem; flex-wrap:wrap; margin:.5rem 0 .4rem;">
+              <input id="checklist-item-key" placeholder="Checklist key (e.g. bank-recon)" />
+              <input id="checklist-item-label" placeholder="Checklist label" />
+              <button type="button" class="btn" id="checklist-save-btn">Save Checklist Item</button>
+            </div>
+
+            <div class="admin-row" style="gap:.5rem; flex-wrap:wrap; margin:.8rem 0 .4rem;">
+              <button type="button" class="btn" id="tax-prep-report-btn">Load Tax Prep Report</button>
+              <button type="button" class="btn" id="tax-prep-export-json-btn">Export CPA JSON</button>
+              <button type="button" class="btn" id="tax-prep-export-csv-btn">Export CPA CSV</button>
+            </div>
+            <div id="tax-prep-summary" class="admin-list">No tax prep report loaded.</div>
+          </section>
+        </div>
+      </div>
+
       <div class="admin-collapsible-card" id="year-close-card" style="margin-top:1rem;">
         <div class="admin-collapsible-head">
           <h3 style="margin:0;">Year-End Close Wizard</h3>
@@ -696,6 +747,21 @@
     const ACCOUNTS_JOURNAL_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/journal');
     const ACCOUNTS_STATEMENTS_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/statements');
     const ACCOUNTS_YEAR_CLOSE_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/year-close');
+    const RECON_IMPORT_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/reconciliation/import');
+    const RECON_LIST_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/reconciliation/list');
+    const RECON_MATCH_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/reconciliation/match');
+    const RECON_SUMMARY_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/reconciliation/summary');
+    const INVOICES_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/invoices');
+    const INVOICE_STATUS_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/invoices/status');
+    const INVOICE_PAYMENT_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/invoices/payment');
+    const AR_AGING_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/tax/ar-aging');
+    const RECURRING_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/recurring');
+    const RECURRING_APPLY_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/recurring/apply');
+    const RULES_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/rules');
+    const CHECKLIST_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/close-checklist');
+    const LOCK_PERIODS_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/accounts/lock-periods');
+    const TAX_PREP_REPORT_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/tax/prep/report');
+    const TAX_PREP_EXPORT_API_URL = CONTACT_API_URL.replace('/api/contact', '/api/tax/prep/export');
 
     // ===== DOM Refs =====
     const adminLock = document.getElementById('admin-lock');
@@ -791,6 +857,35 @@
     const reconRunBtn = document.getElementById('recon-run-btn');
     const reconSummaryEl = document.getElementById('recon-summary');
     const reconMatchesEl = document.getElementById('recon-matches');
+    const advancedAccountingCollapseBtn = document.getElementById('advanced-accounting-collapse-btn');
+    const advancedAccountingBody = document.getElementById('advanced-accounting-body');
+    const invoiceCustomerNameEl = document.getElementById('invoice-customer-name');
+    const invoiceDueDateEl = document.getElementById('invoice-due-date');
+    const invoiceAmountEl = document.getElementById('invoice-amount');
+    const invoiceCreateBtn = document.getElementById('invoice-create-btn');
+    const invoiceRefreshBtn = document.getElementById('invoice-refresh-btn');
+    const invoiceAgingSummaryEl = document.getElementById('invoice-aging-summary');
+    const recurringNameEl = document.getElementById('recurring-name');
+    const recurringTypeEl = document.getElementById('recurring-type');
+    const recurringNextDateEl = document.getElementById('recurring-next-date');
+    const recurringAmountCentsEl = document.getElementById('recurring-amount-cents');
+    const recurringCategoryEl = document.getElementById('recurring-category');
+    const recurringSaveBtn = document.getElementById('recurring-save-btn');
+    const recurringApplyBtn = document.getElementById('recurring-apply-btn');
+    const recurringSummaryEl = document.getElementById('recurring-summary');
+    const lockStartDateEl = document.getElementById('lock-start-date');
+    const lockEndDateEl = document.getElementById('lock-end-date');
+    const lockReasonEl = document.getElementById('lock-reason');
+    const lockAddBtn = document.getElementById('lock-add-btn');
+    const lockRefreshBtn = document.getElementById('lock-refresh-btn');
+    const lockSummaryEl = document.getElementById('lock-summary');
+    const checklistItemKeyEl = document.getElementById('checklist-item-key');
+    const checklistItemLabelEl = document.getElementById('checklist-item-label');
+    const checklistSaveBtn = document.getElementById('checklist-save-btn');
+    const taxPrepReportBtn = document.getElementById('tax-prep-report-btn');
+    const taxPrepExportJsonBtn = document.getElementById('tax-prep-export-json-btn');
+    const taxPrepExportCsvBtn = document.getElementById('tax-prep-export-csv-btn');
+    const taxPrepSummaryEl = document.getElementById('tax-prep-summary');
 
     const accountsYearCloseBtn = document.getElementById('accounts-year-close-btn');
     const auditPackageBtn = document.getElementById('audit-package-btn');
@@ -2165,60 +2260,164 @@
 
     async function runReconciliation() {
       if (!reconCsvEl?.files?.[0]) { openErrorModal('Select a CSV file first.'); return; }
-      const year = reconYearEl?.value || taxYearEl?.value;
-      const month = reconMonthEl?.value || 'all';
       const fileText = await reconCsvEl.files[0].text();
-      let statementRows = parseCsvRows(fileText);
-      if (!statementRows.length) { openErrorModal('Could not parse statement rows from CSV.'); return; }
+      const importRes = await fetch(RECON_IMPORT_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({
+          csv: fileText,
+          sourceName: 'Admin Upload',
+          sourceType: 'csv',
+          accountLabel: 'Primary',
+          csvFilename: reconCsvEl.files[0].name
+        })
+      });
+      const importData = await importRes.json();
+      if (!importRes.ok) { openErrorModal(importData.error || 'Import failed'); return; }
 
-      if (month !== 'all') {
-        statementRows = statementRows.filter((r) => {
-          const d = String(r.date || '').slice(0, 10);
-          return /^\d{4}-\d{2}-\d{2}$/.test(d) && d.startsWith(`${year}-${month}`);
-        });
-      } else {
-        statementRows = statementRows.filter((r) => String(r.date || '').startsWith(`${year}-`));
-      }
-      if (!statementRows.length) { openErrorModal('No statement rows found for the selected period.'); return; }
+      const [summaryRes, listRes] = await Promise.all([
+        fetch(`${RECON_SUMMARY_API_URL}?importId=${encodeURIComponent(importData.importId)}`, { headers: { 'X-Admin-Password': adminPassword } }),
+        fetch(`${RECON_LIST_API_URL}?importId=${encodeURIComponent(importData.importId)}&limit=300`, { headers: { 'X-Admin-Password': adminPassword } })
+      ]);
+      const summary = await summaryRes.json();
+      const list = await listRes.json();
+      if (!summaryRes.ok || !listRes.ok) { openErrorModal(summary.error || list.error || 'Failed to load reconciliation results'); return; }
 
-      const res = await fetch(`${TAX_TX_API_URL}?year=${encodeURIComponent(year)}&type=all&limit=5000`, {
-        headers: { 'X-Admin-Password': adminPassword }
+      reconSummaryEl.textContent = `Imported ${importData.saved} rows | Duplicates flagged: ${importData.duplicateFlags} | Matched: ${summary.matched} | Unmatched: ${summary.unmatched}`;
+      const suggestionByLine = new Map((list.suggestions || []).map(s => [s.lineId, s]));
+      reconMatchesEl.innerHTML = (list.lines || []).slice(0, 150).map((line) => {
+        const sugg = suggestionByLine.get(line.id);
+        const target = sugg?.suggestion;
+        const badge = line.duplicate_flag ? ' <span style="color:#f6ad55;">[duplicate]</span>' : '';
+        const match = line.matched_id ? `<span style="color:#68d391;">matched: ${escHtml(line.matched_type)} #${line.matched_id}</span>` : '<span style="color:var(--muted);">unmatched</span>';
+        const suggestLabel = target ? `${sugg.suggestedType} #${target.id} (${target.category || target.vendor || target.source || ''})` : 'none';
+        return `<div style="padding:.3rem 0; border-bottom:1px dashed var(--line);">${escHtml(line.posted_date)} | ${escHtml(line.description || '')} | $${(Number(line.amount_cents || 0)/100).toFixed(2)}${badge}<br>${match} · suggested: ${escHtml(suggestLabel)}</div>`;
+      }).join('') || '<div style="color:var(--muted);">No statement lines found.</div>';
+      markMoneyBlurTargets();
+    }
+
+    async function createQuickInvoice() {
+      const customerName = (invoiceCustomerNameEl?.value || '').trim();
+      const dueDate = invoiceDueDateEl?.value;
+      const amount = Number(invoiceAmountEl?.value || 0);
+      if (!customerName || !dueDate || !Number.isFinite(amount) || amount <= 0) { openErrorModal('Invoice requires customer, due date, and amount.'); return; }
+      const issueDate = new Date().toISOString().slice(0,10);
+      const invoiceNumber = `INV-${Date.now()}`;
+      const res = await fetch(INVOICES_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({
+          invoiceNumber,
+          customerName,
+          issueDate,
+          dueDate,
+          status: 'sent',
+          items: [{ description: 'Services', quantity: 1, unitAmountCents: Math.round(amount * 100) }]
+        })
       });
       const data = await res.json();
-      if (!res.ok) { openErrorModal(data.error || 'Failed to load ledger data.'); return; }
+      if (!res.ok) { openErrorModal(data.error || 'Failed to create invoice'); return; }
+      openSuccessModal('Invoice created', `Invoice #${data.invoiceId} created.`);
+      await refreshArAging();
+    }
 
-      let ledger = [
-        ...(data.expenses || []).map(r => ({ type: 'expense', date: r.date, amountCents: Number(r.amount_cents || 0), label: `${r.category || ''} ${r.vendor || ''}`.trim() })),
-        ...(data.income || []).map(r => ({ type: 'income', date: r.date, amountCents: Number(r.amount_cents || 0), label: `${r.category || ''} ${r.source || ''}`.trim() }))
-      ];
-      if (month !== 'all') {
-        ledger = ledger.filter((l) => String(l.date || '').startsWith(`${year}-${month}`));
-      }
+    async function refreshArAging() {
+      const res = await fetch(`${AR_AGING_API_URL}?asOf=${encodeURIComponent(new Date().toISOString().slice(0,10))}`, { headers: { 'X-Admin-Password': adminPassword } });
+      const data = await res.json();
+      if (!res.ok) { openErrorModal(data.error || 'Failed to load AR aging'); return; }
+      const b = data.buckets || {};
+      invoiceAgingSummaryEl.innerHTML = `<div><strong>A/R Aging</strong> — 0-30: $${((b['0-30']||0)/100).toFixed(2)} | 31-60: $${((b['31-60']||0)/100).toFixed(2)} | 61-90: $${((b['61-90']||0)/100).toFixed(2)} | 90+: $${((b['90+']||0)/100).toFixed(2)}</div>`;
+    }
 
-      const used = new Set();
-      let matched = 0;
-      const unmatched = [];
-      const matchedLines = [];
-      for (const s of statementRows) {
-        const idx = ledger.findIndex((l, i) => !used.has(i) && l.amountCents === s.amountCents);
-        if (idx >= 0) {
-          used.add(idx);
-          matched++;
-          matchedLines.push({ statement: s, ledger: ledger[idx] });
-        } else {
-          unmatched.push(s);
-        }
-      }
+    async function saveRecurringTemplate() {
+      const payload = {
+        name: (recurringNameEl?.value || '').trim(),
+        txnType: recurringTypeEl?.value || 'expense',
+        frequency: 'monthly',
+        intervalCount: 1,
+        amountCents: Number(recurringAmountCentsEl?.value || 0),
+        category: (recurringCategoryEl?.value || '').trim(),
+        sourceOrVendor: null,
+        paidVia: null,
+        notes: null,
+        nextRunDate: recurringNextDateEl?.value,
+        active: true
+      };
+      if (!payload.name || !payload.category || !payload.nextRunDate || payload.amountCents <= 0) { openErrorModal('Recurring requires name, category, next date, and amount cents.'); return; }
+      const res = await fetch(RECURRING_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (!res.ok) { openErrorModal(data.error || 'Failed to save recurring item'); return; }
+      await refreshRecurringSummary();
+    }
 
-      const periodLabel = month === 'all' ? `${year} (all months)` : `${year}-${month}`;
-      reconSummaryEl.textContent = `Period: ${periodLabel} | Statement rows: ${statementRows.length} | Ledger rows: ${ledger.length} | Matched: ${matched} | Unmatched: ${unmatched.length}`;
-      reconMatchesEl.innerHTML = `
-        <div><strong>Matched</strong></div>
-        ${(matchedLines.slice(0, 120)).map(m => `<div style="padding:.2rem 0; border-bottom:1px dashed var(--line);">${escHtml(m.statement.date)} | ${escHtml(m.statement.description)} | $${(m.statement.amountCents/100).toFixed(2)} ↔ ${escHtml(m.ledger.type)} ${escHtml(m.ledger.label)}</div>`).join('') || '<div style="color:var(--muted);">No matches.</div>'}
-        <div style="margin-top:.5rem;"><strong>Unmatched</strong></div>
-        ${(unmatched.slice(0, 120)).map(u => `<div style="padding:.2rem 0; border-bottom:1px dashed var(--line);">${escHtml(u.date)} | ${escHtml(u.description)} | $${(u.amountCents/100).toFixed(2)}</div>`).join('') || '<div style="color:var(--muted);">No unmatched rows.</div>'}
-      `;
-      markMoneyBlurTargets();
+    async function applyRecurringNow() {
+      const res = await fetch(RECURRING_APPLY_API_URL, { method: 'POST', headers: { 'X-Admin-Password': adminPassword } });
+      const data = await res.json();
+      if (!res.ok) { openErrorModal(data.error || 'Failed to apply recurring items'); return; }
+      openSuccessModal('Recurring Applied', `Applied ${data.applied || 0} recurring templates.`);
+      await refreshRecurringSummary();
+      await loadTaxData();
+    }
+
+    async function refreshRecurringSummary() {
+      const res = await fetch(RECURRING_API_URL, { headers: { 'X-Admin-Password': adminPassword } });
+      const data = await res.json();
+      if (!res.ok) { openErrorModal(data.error || 'Failed to load recurring data'); return; }
+      recurringSummaryEl.innerHTML = `<div><strong>Templates:</strong> ${(data.templates || []).length} | <strong>Rules:</strong> ${(data.rules || []).length}</div>`;
+    }
+
+    async function addLockPeriod() {
+      const startDate = lockStartDateEl?.value;
+      const endDate = lockEndDateEl?.value;
+      if (!startDate || !endDate) { openErrorModal('Select start and end dates.'); return; }
+      const res = await fetch(LOCK_PERIODS_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword }, body: JSON.stringify({ startDate, endDate, reason: lockReasonEl?.value || '' }) });
+      const data = await res.json();
+      if (!res.ok) { openErrorModal(data.error || 'Failed to create lock period'); return; }
+      await refreshLocksAndChecklist();
+    }
+
+    async function refreshLocksAndChecklist() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const [lockRes, checkRes] = await Promise.all([
+        fetch(LOCK_PERIODS_API_URL, { headers: { 'X-Admin-Password': adminPassword } }),
+        fetch(`${CHECKLIST_API_URL}?year=${year}&month=${month}`, { headers: { 'X-Admin-Password': adminPassword } })
+      ]);
+      const lockData = await lockRes.json();
+      const checkData = await checkRes.json();
+      if (!lockRes.ok || !checkRes.ok) { openErrorModal(lockData.error || checkData.error || 'Failed to load close data'); return; }
+      lockSummaryEl.innerHTML = `<div><strong>Locks:</strong> ${(lockData.periods || []).length} | <strong>Checklist items this month:</strong> ${(checkData.items || []).length}</div>`;
+    }
+
+    async function saveChecklistItem() {
+      const now = new Date();
+      const payload = {
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        itemKey: (checklistItemKeyEl?.value || '').trim(),
+        itemLabel: (checklistItemLabelEl?.value || '').trim(),
+        completed: false
+      };
+      if (!payload.itemKey || !payload.itemLabel) { openErrorModal('Checklist key and label are required.'); return; }
+      const res = await fetch(CHECKLIST_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (!res.ok) { openErrorModal(data.error || 'Failed to save checklist item'); return; }
+      await refreshLocksAndChecklist();
+    }
+
+    async function loadTaxPrepReport() {
+      const year = taxSummaryYearEl?.value || taxYearEl?.value;
+      const res = await fetch(`${TAX_PREP_REPORT_API_URL}?year=${encodeURIComponent(year)}`, { headers: { 'X-Admin-Password': adminPassword } });
+      const data = await res.json();
+      if (!res.ok) { openErrorModal(data.error || 'Failed to load tax prep report'); return; }
+      taxPrepSummaryEl.innerHTML = `<div><strong>Tax Prep ${year}</strong> | Gross: $${(Number(data.grossIncomeCents||0)/100).toFixed(2)} | Deductions: $${(Number(data.deductibleCents||0)/100).toFixed(2)} | Taxable basis: $${(Number(data.taxableBasisCents||0)/100).toFixed(2)} | Est. quarterly: $${(Number(data.estimatedQuarterlyTaxCents||0)/100).toFixed(2)}</div>`;
+    }
+
+    function exportTaxPrep(format) {
+      const year = taxSummaryYearEl?.value || taxYearEl?.value;
+      const url = `${TAX_PREP_EXPORT_API_URL}?year=${encodeURIComponent(year)}&format=${encodeURIComponent(format)}`;
+      window.open(url + `&key=${encodeURIComponent(adminPassword)}`, '_blank', 'noopener');
     }
 
     async function loadAccountsData() {
@@ -2362,16 +2561,17 @@
       show('booking-controls-card', tab === 'booking');
       show('tax-ledger-card', tab === 'tax');
       show('accounts-card', tab === 'accounts');
+      show('advanced-accounting-card', tab === 'accounts');
       show('reconciliation-card', tab === 'reconciliation');
       show('year-close-card', tab === 'year-close');
       show('audit-package-card', tab === 'audit-package');
     }
 
     function disableLegacyCollapse() {
-      [bookingCollapseBtn, taxCollapseBtn, accountsCollapseBtn, reconciliationCollapseBtn, yearCloseCollapseBtn, auditPackageCollapseBtn].forEach((btn) => {
+      [bookingCollapseBtn, taxCollapseBtn, accountsCollapseBtn, reconciliationCollapseBtn, advancedAccountingCollapseBtn, yearCloseCollapseBtn, auditPackageCollapseBtn].forEach((btn) => {
         if (btn) btn.style.display = 'none';
       });
-      [bookingControlsBody, taxLedgerBody, accountsBody, reconciliationBody, yearCloseBody, auditPackageBody].forEach((body) => {
+      [bookingControlsBody, taxLedgerBody, accountsBody, reconciliationBody, advancedAccountingBody, yearCloseBody, auditPackageBody].forEach((body) => {
         body?.classList.remove('admin-collapsible-body-collapsed');
       });
     }
@@ -2403,6 +2603,9 @@
         await loadAdminData();
         await loadTaxTransactions();
         await loadAccountsData();
+        await refreshArAging();
+        await refreshRecurringSummary();
+        await refreshLocksAndChecklist();
       } catch (e) {
         openErrorModal(`Admin unlock failed: ${e.message || e}`);
       }
@@ -2562,6 +2765,16 @@
     accountsYearCloseBtn?.addEventListener('click', openYearCloseWizard);
     auditPackageBtn?.addEventListener('click', openAuditPackageModal);
     reconRunBtn?.addEventListener('click', runReconciliation);
+    invoiceCreateBtn?.addEventListener('click', createQuickInvoice);
+    invoiceRefreshBtn?.addEventListener('click', refreshArAging);
+    recurringSaveBtn?.addEventListener('click', saveRecurringTemplate);
+    recurringApplyBtn?.addEventListener('click', applyRecurringNow);
+    lockAddBtn?.addEventListener('click', addLockPeriod);
+    lockRefreshBtn?.addEventListener('click', refreshLocksAndChecklist);
+    checklistSaveBtn?.addEventListener('click', saveChecklistItem);
+    taxPrepReportBtn?.addEventListener('click', loadTaxPrepReport);
+    taxPrepExportJsonBtn?.addEventListener('click', () => exportTaxPrep('json'));
+    taxPrepExportCsvBtn?.addEventListener('click', () => exportTaxPrep('csv'));
     accountsYearEl?.addEventListener('change', loadAccountsData);
     accountsFromEl?.addEventListener('change', loadAccountsData);
     accountsToEl?.addEventListener('change', loadAccountsData);

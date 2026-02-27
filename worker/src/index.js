@@ -58,10 +58,10 @@ export default {
       const isBookingsRead = url.pathname === '/api/bookings' && request.method === 'GET';
       const isAvailabilityRead = url.pathname === '/api/availability' && request.method === 'GET';
       const isAdminBlockWrite = ['/api/admin/block-slot','/api/admin/block-day','/api/admin/bookings/cleanup-pending'].includes(url.pathname) && request.method === 'POST';
-      const isTaxRead = ['/api/tax/transactions','/api/tax/export.csv','/api/tax/receipt'].includes(url.pathname) && request.method === 'GET';
+      const isTaxRead = ['/api/tax/transactions','/api/tax/export.csv','/api/tax/receipt','/api/tax/ar-aging','/api/tax/prep/report','/api/tax/prep/export'].includes(url.pathname) && request.method === 'GET';
       const isTaxWrite = ['/api/tax/expense','/api/tax/income','/api/tax/owner-transfer','/api/tax/expense/update','/api/tax/income/update','/api/tax/expense/delete','/api/tax/income/delete','/api/tax/receipt/upload'].includes(url.pathname) && request.method === 'POST';
-      const isAccountsRead = ['/api/accounts/list','/api/accounts/summary','/api/accounts/journal','/api/accounts/statements'].includes(url.pathname) && request.method === 'GET';
-      const isAccountsWrite = ['/api/accounts/journal','/api/accounts/rebuild-auto-journal','/api/accounts/year-close'].includes(url.pathname) && request.method === 'POST';
+      const isAccountsRead = ['/api/accounts/list','/api/accounts/summary','/api/accounts/journal','/api/accounts/statements','/api/accounts/reconciliation/summary','/api/accounts/reconciliation/list','/api/accounts/invoices','/api/accounts/recurring','/api/accounts/rules','/api/accounts/close-checklist','/api/accounts/lock-periods'].includes(url.pathname) && request.method === 'GET';
+      const isAccountsWrite = ['/api/accounts/journal','/api/accounts/rebuild-auto-journal','/api/accounts/year-close','/api/accounts/reconciliation/import','/api/accounts/reconciliation/match','/api/accounts/invoices','/api/accounts/invoices/status','/api/accounts/invoices/payment','/api/accounts/recurring','/api/accounts/recurring/apply','/api/accounts/rules','/api/accounts/close-checklist','/api/accounts/lock-periods'].includes(url.pathname) && request.method === 'POST';
       const isPostRoute = ['/api/contact', '/api/checkout-session', '/api/zombie-bag-checkout'].includes(url.pathname) && request.method === 'POST';
       if (!isBookingsRead && !isAvailabilityRead && !isAdminBlockWrite && !isTaxRead && !isTaxWrite && !isAccountsRead && !isAccountsWrite && !isPostRoute) {
         return json({ ok: false, error: 'Method not allowed' }, 405, corsHeaders);
@@ -178,6 +178,86 @@ export default {
 
     if (url.pathname === '/api/accounts/year-close' && request.method === 'POST') {
       return handleAccountsYearClose(request, env, corsHeaders, url);
+    }
+
+    if (url.pathname === '/api/accounts/reconciliation/import' && request.method === 'POST') {
+      return handleReconciliationImport(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/reconciliation/list' && request.method === 'GET') {
+      return handleReconciliationList(request, env, corsHeaders, url);
+    }
+
+    if (url.pathname === '/api/accounts/reconciliation/match' && request.method === 'POST') {
+      return handleReconciliationMatch(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/reconciliation/summary' && request.method === 'GET') {
+      return handleReconciliationSummary(request, env, corsHeaders, url);
+    }
+
+    if (url.pathname === '/api/accounts/invoices' && request.method === 'GET') {
+      return handleInvoicesList(request, env, corsHeaders, url);
+    }
+
+    if (url.pathname === '/api/accounts/invoices' && request.method === 'POST') {
+      return handleInvoiceCreate(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/invoices/status' && request.method === 'POST') {
+      return handleInvoiceStatus(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/invoices/payment' && request.method === 'POST') {
+      return handleInvoicePayment(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/tax/ar-aging' && request.method === 'GET') {
+      return handleArAging(request, env, corsHeaders, url);
+    }
+
+    if (url.pathname === '/api/accounts/recurring' && request.method === 'GET') {
+      return handleRecurringList(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/recurring' && request.method === 'POST') {
+      return handleRecurringUpsert(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/recurring/apply' && request.method === 'POST') {
+      return handleRecurringApply(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/rules' && request.method === 'GET') {
+      return handleRulesList(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/rules' && request.method === 'POST') {
+      return handleRulesUpsert(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/close-checklist' && request.method === 'GET') {
+      return handleChecklistList(request, env, corsHeaders, url);
+    }
+
+    if (url.pathname === '/api/accounts/close-checklist' && request.method === 'POST') {
+      return handleChecklistUpsert(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/lock-periods' && request.method === 'GET') {
+      return handleLockPeriodsList(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/accounts/lock-periods' && request.method === 'POST') {
+      return handleLockPeriodsUpsert(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/tax/prep/report' && request.method === 'GET') {
+      return handleTaxPrepReport(request, env, corsHeaders, url);
+    }
+
+    if (url.pathname === '/api/tax/prep/export' && request.method === 'GET') {
+      return handleTaxPrepExport(request, env, corsHeaders, url);
     }
 
     return json({ ok: false, error: 'Not found' }, 404, corsHeaders);
@@ -1099,6 +1179,7 @@ async function handleTaxExpense(request, env, corsHeaders, url) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(expenseDate)) return json({ ok: false, error: 'Invalid date' }, 400, corsHeaders);
   if (!category) return json({ ok: false, error: 'Missing category' }, 400, corsHeaders);
   if (cents === null) return json({ ok: false, error: 'Invalid amount' }, 400, corsHeaders);
+  if (await isDateLocked(env.DB, expenseDate)) return json({ ok: false, error: 'Selected date is in a locked period' }, 409, corsHeaders);
 
   const r = await env.DB.prepare(
     `INSERT INTO tax_expenses (expense_date, vendor, category, amount_cents, paid_via, notes)
@@ -1145,6 +1226,7 @@ async function handleTaxIncome(request, env, corsHeaders, url) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(incomeDate)) return json({ ok: false, error: 'Invalid date' }, 400, corsHeaders);
   if (!category) return json({ ok: false, error: 'Missing category' }, 400, corsHeaders);
   if (cents === null) return json({ ok: false, error: 'Invalid amount' }, 400, corsHeaders);
+  if (await isDateLocked(env.DB, incomeDate)) return json({ ok: false, error: 'Selected date is in a locked period' }, 409, corsHeaders);
 
   const r = await env.DB.prepare(
     `INSERT INTO tax_income (income_date, source, category, amount_cents, stripe_session_id, notes, is_owner_funded)
@@ -1191,6 +1273,7 @@ async function handleTaxExpenseUpdate(request, env, corsHeaders, url) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(expenseDate)) return json({ ok: false, error: 'Invalid date' }, 400, corsHeaders);
   if (!category) return json({ ok: false, error: 'Missing category' }, 400, corsHeaders);
   if (cents === null) return json({ ok: false, error: 'Invalid amount' }, 400, corsHeaders);
+  if (await isDateLocked(env.DB, expenseDate)) return json({ ok: false, error: 'Selected date is in a locked period' }, 409, corsHeaders);
 
   const existing = await env.DB.prepare('SELECT id FROM tax_expenses WHERE id = ?1').bind(id).first();
   if (!existing) return json({ ok: false, error: 'Expense not found' }, 404, corsHeaders);
@@ -1238,6 +1321,7 @@ async function handleTaxOwnerTransfer(request, env, corsHeaders, url) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) return json({ ok: false, error: 'Invalid date' }, 400, corsHeaders);
   if (!['personal_to_business','business_to_personal','personal_paid_business_card'].includes(transferType)) return json({ ok: false, error: 'Invalid transfer type' }, 400, corsHeaders);
   if (!Number.isFinite(cents) || cents <= 0) return json({ ok: false, error: 'Invalid amount' }, 400, corsHeaders);
+  if (await isDateLocked(env.DB, entryDate)) return json({ ok: false, error: 'Selected date is in a locked period' }, 409, corsHeaders);
 
   const cashId = await getAccountIdByCode(env.DB, '1000');
   const ownerContribId = await getAccountIdByCode(env.DB, '3100');
@@ -1283,6 +1367,7 @@ async function handleTaxIncomeUpdate(request, env, corsHeaders, url) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(incomeDate)) return json({ ok: false, error: 'Invalid date' }, 400, corsHeaders);
   if (!category) return json({ ok: false, error: 'Missing category' }, 400, corsHeaders);
   if (cents === null) return json({ ok: false, error: 'Invalid amount' }, 400, corsHeaders);
+  if (await isDateLocked(env.DB, incomeDate)) return json({ ok: false, error: 'Selected date is in a locked period' }, 409, corsHeaders);
 
   const existing = await env.DB.prepare('SELECT id FROM tax_income WHERE id = ?1').bind(id).first();
   if (!existing) return json({ ok: false, error: 'Income not found' }, 404, corsHeaders);
@@ -1971,6 +2056,410 @@ async function upsertTaxIncomeJournal(db, row) {
   const ins = await db.prepare(`INSERT INTO journal_entries (entry_date, memo, source_type, source_id) VALUES (?1, ?2, 'tax_income', ?3)`).bind(row.income_date, memo, row.id).run();
   const entryId = Number(ins.meta?.last_row_id || 0);
   await db.prepare(`INSERT INTO journal_lines (entry_id, account_id, debit_cents, credit_cents) VALUES (?1, ?2, ?3, 0), (?1, ?4, 0, ?3)`).bind(entryId, debitAccountId, amount, creditAccountId).run();
+}
+
+async function isDateLocked(db, dateText) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateText || ''))) return false;
+  const row = await db.prepare(`SELECT id FROM locked_periods WHERE start_date <= ?1 AND end_date >= ?1 LIMIT 1`).bind(dateText).first().catch(() => null);
+  return !!row;
+}
+
+function normalizeCsvLine(line) {
+  const parts = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuotes = !inQuotes; continue; }
+    if (ch === ',' && !inQuotes) { parts.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  parts.push(cur.trim());
+  return parts;
+}
+
+function lineHash(row) {
+  const text = `${row.date}|${(row.description || '').toLowerCase()}|${row.amountCents}`;
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = ((h << 5) - h + text.charCodeAt(i)) | 0;
+  return `h${Math.abs(h)}`;
+}
+
+function parseStatementCsv(text) {
+  const lines = String(text || '').split(/\r?\n/).filter(Boolean);
+  if (!lines.length) return [];
+  const headers = normalizeCsvLine(lines[0]).map(h => h.toLowerCase());
+  const idxDate = headers.findIndex(h => h.includes('date'));
+  const idxDesc = headers.findIndex(h => h.includes('desc') || h.includes('memo') || h.includes('merchant') || h.includes('name'));
+  const idxAmt = headers.findIndex(h => h.includes('amount'));
+  const out = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = normalizeCsvLine(lines[i]);
+    const date = (cols[idxDate >= 0 ? idxDate : 0] || '').slice(0, 10);
+    const description = cols[idxDesc >= 0 ? idxDesc : 1] || '';
+    const rawAmount = cols[idxAmt >= 0 ? idxAmt : 2] || '';
+    const amount = Number(String(rawAmount).replace(/[$,]/g, ''));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(amount)) continue;
+    out.push({ date, description, amountCents: Math.round(amount * 100) });
+  }
+  return out;
+}
+
+async function handleReconciliationImport(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  let data;
+  try { data = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400, corsHeaders); }
+
+  const rows = parseStatementCsv(data.csv || '');
+  if (!rows.length) return json({ ok: false, error: 'No statement rows parsed from CSV' }, 400, corsHeaders);
+
+  const ins = await env.DB.prepare(`INSERT INTO bank_statement_imports (source_name, source_type, account_label, statement_start_date, statement_end_date, uploaded_by, csv_filename) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`)
+    .bind(data.sourceName || null, data.sourceType || 'bank_csv', data.accountLabel || null, data.startDate || null, data.endDate || null, 'admin', data.csvFilename || null).run();
+  const importId = Number(ins.meta?.last_row_id || 0);
+
+  let saved = 0;
+  let duplicateFlags = 0;
+  for (const row of rows) {
+    const hash = lineHash(row);
+    const dup = await env.DB.prepare(`SELECT id FROM bank_statement_lines WHERE line_hash = ?1 AND posted_date = ?2 AND amount_cents = ?3 LIMIT 1`).bind(hash, row.date, row.amountCents).first();
+    const duplicateFlag = dup ? 1 : 0;
+    if (duplicateFlag) duplicateFlags++;
+    await env.DB.prepare(`INSERT INTO bank_statement_lines (import_id, line_hash, posted_date, description, amount_cents, duplicate_flag) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`).bind(importId, hash, row.date, row.description || null, row.amountCents, duplicateFlag).run();
+    saved++;
+  }
+
+  return json({ ok: true, importId, saved, duplicateFlags }, 200, corsHeaders);
+}
+
+async function handleReconciliationList(request, env, corsHeaders, url) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, url);
+  if (!auth.ok) return auth.res;
+  const importId = Number(url.searchParams.get('importId') || 0);
+  const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit') || 200)));
+
+  const lines = importId
+    ? await env.DB.prepare(`SELECT * FROM bank_statement_lines WHERE import_id = ?1 ORDER BY posted_date DESC, id DESC LIMIT ?2`).bind(importId, limit).all()
+    : await env.DB.prepare(`SELECT * FROM bank_statement_lines ORDER BY id DESC LIMIT ?1`).bind(limit).all();
+
+  const suggestions = [];
+  for (const line of (lines.results || [])) {
+    const amt = Math.abs(Number(line.amount_cents || 0));
+    const tx = line.amount_cents < 0
+      ? await env.DB.prepare(`SELECT id, expense_date AS tx_date, category, vendor FROM tax_expenses WHERE amount_cents = ?1 ORDER BY ABS(julianday(expense_date)-julianday(?2)) ASC LIMIT 1`).bind(amt, line.posted_date).first()
+      : await env.DB.prepare(`SELECT id, income_date AS tx_date, category, source FROM tax_income WHERE amount_cents = ?1 ORDER BY ABS(julianday(income_date)-julianday(?2)) ASC LIMIT 1`).bind(amt, line.posted_date).first();
+    suggestions.push({ lineId: line.id, suggestion: tx || null, suggestedType: line.amount_cents < 0 ? 'expense' : 'income' });
+  }
+
+  return json({ ok: true, lines: lines.results || [], suggestions }, 200, corsHeaders);
+}
+
+async function handleReconciliationMatch(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  let data;
+  try { data = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400, corsHeaders); }
+  const lineId = Number(data.lineId || 0);
+  const matchedType = (data.matchedType || '').toString();
+  const matchedId = Number(data.matchedId || 0);
+  if (!lineId || !['expense','income','journal'].includes(matchedType) || !matchedId) return json({ ok: false, error: 'Invalid payload' }, 400, corsHeaders);
+
+  await env.DB.prepare(`UPDATE bank_statement_lines SET matched_type = ?1, matched_id = ?2, matched_at = datetime('now') WHERE id = ?3`).bind(matchedType, matchedId, lineId).run();
+  return json({ ok: true, lineId }, 200, corsHeaders);
+}
+
+async function handleReconciliationSummary(request, env, corsHeaders, url) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, url);
+  if (!auth.ok) return auth.res;
+  const importId = Number(url.searchParams.get('importId') || 0);
+  const row = importId
+    ? await env.DB.prepare(`SELECT COUNT(*) total, SUM(CASE WHEN matched_id IS NOT NULL THEN 1 ELSE 0 END) matched, SUM(CASE WHEN duplicate_flag = 1 THEN 1 ELSE 0 END) duplicate_count FROM bank_statement_lines WHERE import_id = ?1`).bind(importId).first()
+    : await env.DB.prepare(`SELECT COUNT(*) total, SUM(CASE WHEN matched_id IS NOT NULL THEN 1 ELSE 0 END) matched, SUM(CASE WHEN duplicate_flag = 1 THEN 1 ELSE 0 END) duplicate_count FROM bank_statement_lines`).first();
+  const total = Number(row?.total || 0);
+  const matched = Number(row?.matched || 0);
+  return json({ ok: true, total, matched, unmatched: Math.max(0, total - matched), duplicateCount: Number(row?.duplicate_count || 0) }, 200, corsHeaders);
+}
+
+async function handleInvoiceCreate(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  let data;
+  try { data = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400, corsHeaders); }
+  const invoiceNumber = (data.invoiceNumber || `INV-${Date.now()}`).toString();
+  const customerName = (data.customerName || '').toString().trim();
+  const issueDate = (data.issueDate || '').toString().trim();
+  const dueDate = (data.dueDate || '').toString().trim();
+  const items = Array.isArray(data.items) ? data.items : [];
+  if (!customerName || !/^\d{4}-\d{2}-\d{2}$/.test(issueDate) || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !items.length) return json({ ok: false, error: 'Missing required invoice fields' }, 400, corsHeaders);
+
+  let subtotal = 0;
+  for (const item of items) subtotal += Math.round(Number(item.quantity || 1) * Number(item.unitAmountCents || 0));
+  const taxCents = Math.max(0, Number(data.taxCents || 0));
+  const total = subtotal + taxCents;
+
+  const r = await env.DB.prepare(`INSERT INTO invoices (invoice_number, customer_name, customer_email, customer_company, issue_date, due_date, status, subtotal_cents, tax_cents, total_cents, amount_paid_cents, balance_due_cents, notes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 0, ?10, ?11)`)
+    .bind(invoiceNumber, customerName, data.customerEmail || null, data.customerCompany || null, issueDate, dueDate, data.status || 'draft', subtotal, taxCents, total, data.notes || null).run();
+  const invoiceId = Number(r.meta?.last_row_id || 0);
+
+  for (const item of items) {
+    const qty = Number(item.quantity || 1);
+    const unit = Number(item.unitAmountCents || 0);
+    const lineTotal = Math.round(qty * unit);
+    await env.DB.prepare(`INSERT INTO invoice_line_items (invoice_id, item_description, quantity, unit_amount_cents, line_total_cents) VALUES (?1, ?2, ?3, ?4, ?5)`).bind(invoiceId, (item.description || '').toString(), qty, unit, lineTotal).run();
+  }
+  return json({ ok: true, invoiceId }, 200, corsHeaders);
+}
+
+async function handleInvoicesList(request, env, corsHeaders, url) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, url);
+  if (!auth.ok) return auth.res;
+  const status = (url.searchParams.get('status') || '').trim();
+  const rows = status
+    ? await env.DB.prepare(`SELECT * FROM invoices WHERE status = ?1 ORDER BY due_date ASC, id DESC LIMIT 300`).bind(status).all()
+    : await env.DB.prepare(`SELECT * FROM invoices ORDER BY due_date ASC, id DESC LIMIT 300`).all();
+  return json({ ok: true, invoices: rows.results || [] }, 200, corsHeaders);
+}
+
+async function handleInvoiceStatus(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  let data;
+  try { data = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400, corsHeaders); }
+  const id = Number(data.id || 0);
+  const status = (data.status || '').toString();
+  if (!id || !['draft','sent','partial','paid','void'].includes(status)) return json({ ok: false, error: 'Invalid payload' }, 400, corsHeaders);
+  const paidDate = status === 'paid' ? (data.paidDate || new Date().toISOString().slice(0,10)) : null;
+  await env.DB.prepare(`UPDATE invoices SET status = ?1, paid_date = COALESCE(?2, paid_date), updated_at = datetime('now') WHERE id = ?3`).bind(status, paidDate, id).run();
+  return json({ ok: true, id, status }, 200, corsHeaders);
+}
+
+async function handleInvoicePayment(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  let data;
+  try { data = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400, corsHeaders); }
+  const id = Number(data.id || 0);
+  const paymentCents = Math.max(0, Number(data.paymentCents || 0));
+  if (!id || paymentCents <= 0) return json({ ok: false, error: 'Invalid payload' }, 400, corsHeaders);
+  const inv = await env.DB.prepare(`SELECT total_cents, amount_paid_cents FROM invoices WHERE id = ?1`).bind(id).first();
+  if (!inv) return json({ ok: false, error: 'Invoice not found' }, 404, corsHeaders);
+  const paid = Number(inv.amount_paid_cents || 0) + paymentCents;
+  const total = Number(inv.total_cents || 0);
+  const balance = Math.max(0, total - paid);
+  const status = balance <= 0 ? 'paid' : 'partial';
+  await env.DB.prepare(`UPDATE invoices SET amount_paid_cents = ?1, balance_due_cents = ?2, status = ?3, paid_date = CASE WHEN ?2 = 0 THEN date('now') ELSE paid_date END, updated_at = datetime('now') WHERE id = ?4`).bind(paid, balance, status, balance, id).run();
+  return json({ ok: true, id, amountPaidCents: paid, balanceDueCents: balance, status }, 200, corsHeaders);
+}
+
+async function handleArAging(request, env, corsHeaders, url) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, url);
+  if (!auth.ok) return auth.res;
+  const asOf = (url.searchParams.get('asOf') || new Date().toISOString().slice(0,10)).slice(0,10);
+  const rows = await env.DB.prepare(`SELECT id, invoice_number, customer_name, due_date, balance_due_cents, CAST(julianday(?1) - julianday(due_date) AS INTEGER) AS days_past_due FROM invoices WHERE status IN ('sent','partial') AND balance_due_cents > 0`).bind(asOf).all();
+  const buckets = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0 };
+  for (const r of (rows.results || [])) {
+    const days = Math.max(0, Number(r.days_past_due || 0));
+    const amt = Number(r.balance_due_cents || 0);
+    if (days <= 30) buckets['0-30'] += amt;
+    else if (days <= 60) buckets['31-60'] += amt;
+    else if (days <= 90) buckets['61-90'] += amt;
+    else buckets['90+'] += amt;
+  }
+  return json({ ok: true, asOf, buckets, invoices: rows.results || [] }, 200, corsHeaders);
+}
+
+async function handleRecurringList(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  const [templates, rules] = await Promise.all([
+    env.DB.prepare(`SELECT * FROM recurring_templates ORDER BY active DESC, next_run_date ASC, id DESC`).all(),
+    env.DB.prepare(`SELECT * FROM merchant_rules ORDER BY active DESC, id DESC`).all()
+  ]);
+  return json({ ok: true, templates: templates.results || [], rules: rules.results || [] }, 200, corsHeaders);
+}
+
+async function handleRecurringUpsert(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  let data;
+  try { data = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400, corsHeaders); }
+  const id = Number(data.id || 0);
+  if (id) {
+    await env.DB.prepare(`UPDATE recurring_templates SET name=?1, txn_type=?2, frequency=?3, day_of_month=?4, interval_count=?5, amount_cents=?6, category=?7, source_or_vendor=?8, paid_via=?9, notes=?10, next_run_date=?11, active=?12, updated_at=datetime('now') WHERE id=?13`)
+      .bind(data.name, data.txnType, data.frequency, data.dayOfMonth || null, data.intervalCount || 1, data.amountCents, data.category, data.sourceOrVendor || null, data.paidVia || null, data.notes || null, data.nextRunDate, data.active ? 1 : 0, id).run();
+    return json({ ok: true, id }, 200, corsHeaders);
+  }
+  const r = await env.DB.prepare(`INSERT INTO recurring_templates (name, txn_type, frequency, day_of_month, interval_count, amount_cents, category, source_or_vendor, paid_via, notes, next_run_date, active) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`)
+    .bind(data.name, data.txnType, data.frequency, data.dayOfMonth || null, data.intervalCount || 1, data.amountCents, data.category, data.sourceOrVendor || null, data.paidVia || null, data.notes || null, data.nextRunDate, data.active ? 1 : 0).run();
+  return json({ ok: true, id: Number(r.meta?.last_row_id || 0) }, 200, corsHeaders);
+}
+
+async function handleRecurringApply(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  const today = new Date().toISOString().slice(0,10);
+  const dueRows = await env.DB.prepare(`SELECT * FROM recurring_templates WHERE active = 1 AND next_run_date <= ?1`).bind(today).all();
+  let applied = 0;
+  for (const t of (dueRows.results || [])) {
+    if (await isDateLocked(env.DB, t.next_run_date)) continue;
+    if (t.txn_type === 'expense') {
+      const ins = await env.DB.prepare(`INSERT INTO tax_expenses (expense_date, vendor, category, amount_cents, paid_via, notes) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`).bind(t.next_run_date, t.source_or_vendor || null, t.category, t.amount_cents, t.paid_via || null, t.notes || `Recurring: ${t.name}`).run();
+      const rowId = Number(ins.meta?.last_row_id || 0);
+      if (rowId) await upsertTaxExpenseJournal(env.DB, { id: rowId, expense_date: t.next_run_date, vendor: t.source_or_vendor || null, category: t.category, amount_cents: Number(t.amount_cents || 0), paid_via: t.paid_via || null, notes: t.notes || `Recurring: ${t.name}` });
+    } else {
+      const ins = await env.DB.prepare(`INSERT INTO tax_income (income_date, source, category, amount_cents, notes, is_owner_funded) VALUES (?1, ?2, ?3, ?4, ?5, 0)`).bind(t.next_run_date, t.source_or_vendor || null, t.category, t.amount_cents, t.notes || `Recurring: ${t.name}`).run();
+      const rowId = Number(ins.meta?.last_row_id || 0);
+      if (rowId) await upsertTaxIncomeJournal(env.DB, { id: rowId, income_date: t.next_run_date, source: t.source_or_vendor || null, category: t.category, amount_cents: Number(t.amount_cents || 0), notes: t.notes || `Recurring: ${t.name}`, is_owner_funded: 0 });
+    }
+    const nextDate = advanceDate(String(t.next_run_date), String(t.frequency || 'monthly'), Number(t.interval_count || 1));
+    await env.DB.prepare(`UPDATE recurring_templates SET last_run_at = datetime('now'), next_run_date = ?1, updated_at = datetime('now') WHERE id = ?2`).bind(nextDate, t.id).run();
+    applied++;
+  }
+  return json({ ok: true, applied }, 200, corsHeaders);
+}
+
+function advanceDate(isoDate, frequency, intervalCount) {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  const n = Math.max(1, Number(intervalCount || 1));
+  if (frequency === 'weekly') d.setUTCDate(d.getUTCDate() + (7 * n));
+  else if (frequency === 'quarterly') d.setUTCMonth(d.getUTCMonth() + (3 * n));
+  else if (frequency === 'yearly') d.setUTCFullYear(d.getUTCFullYear() + n);
+  else d.setUTCMonth(d.getUTCMonth() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+async function handleRulesList(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  const rows = await env.DB.prepare(`SELECT * FROM merchant_rules ORDER BY active DESC, id DESC`).all();
+  return json({ ok: true, rules: rows.results || [] }, 200, corsHeaders);
+}
+
+async function handleRulesUpsert(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  let data;
+  try { data = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400, corsHeaders); }
+  const id = Number(data.id || 0);
+  if (id) {
+    await env.DB.prepare(`UPDATE merchant_rules SET match_pattern=?1, match_mode=?2, apply_category=?3, apply_txn_type=?4, apply_paid_via=?5, active=?6, updated_at=datetime('now') WHERE id=?7`)
+      .bind(data.matchPattern, data.matchMode || 'contains', data.applyCategory, data.applyTxnType || 'expense', data.applyPaidVia || null, data.active ? 1 : 0, id).run();
+    return json({ ok: true, id }, 200, corsHeaders);
+  }
+  const r = await env.DB.prepare(`INSERT INTO merchant_rules (match_pattern, match_mode, apply_category, apply_txn_type, apply_paid_via, active) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`)
+    .bind(data.matchPattern, data.matchMode || 'contains', data.applyCategory, data.applyTxnType || 'expense', data.applyPaidVia || null, data.active ? 1 : 0).run();
+  return json({ ok: true, id: Number(r.meta?.last_row_id || 0) }, 200, corsHeaders);
+}
+
+async function handleChecklistList(request, env, corsHeaders, url) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, url);
+  if (!auth.ok) return auth.res;
+  const year = Number(url.searchParams.get('year') || new Date().getUTCFullYear());
+  const month = Number(url.searchParams.get('month') || (new Date().getUTCMonth() + 1));
+  const rows = await env.DB.prepare(`SELECT * FROM close_checklist_items WHERE year = ?1 AND month = ?2 ORDER BY id ASC`).bind(year, month).all();
+  return json({ ok: true, year, month, items: rows.results || [] }, 200, corsHeaders);
+}
+
+async function handleChecklistUpsert(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  let data;
+  try { data = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400, corsHeaders); }
+  const year = Number(data.year);
+  const month = Number(data.month);
+  const itemKey = (data.itemKey || '').toString().trim();
+  const itemLabel = (data.itemLabel || '').toString().trim();
+  const completed = data.completed ? 1 : 0;
+  if (!year || !month || !itemKey || !itemLabel) return json({ ok: false, error: 'Missing fields' }, 400, corsHeaders);
+  await env.DB.prepare(`INSERT INTO close_checklist_items (year, month, item_key, item_label, completed, completed_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, CASE WHEN ?5 = 1 THEN datetime('now') ELSE NULL END, datetime('now')) ON CONFLICT(year, month, item_key) DO UPDATE SET item_label = excluded.item_label, completed = excluded.completed, completed_at = CASE WHEN excluded.completed = 1 THEN datetime('now') ELSE NULL END, updated_at = datetime('now')`).bind(year, month, itemKey, itemLabel, completed).run();
+  return json({ ok: true }, 200, corsHeaders);
+}
+
+async function handleLockPeriodsList(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  const rows = await env.DB.prepare(`SELECT * FROM locked_periods ORDER BY start_date DESC, id DESC`).all();
+  return json({ ok: true, periods: rows.results || [] }, 200, corsHeaders);
+}
+
+async function handleLockPeriodsUpsert(request, env, corsHeaders) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, new URL(request.url));
+  if (!auth.ok) return auth.res;
+  let data;
+  try { data = await request.json(); } catch { return json({ ok: false, error: 'Invalid JSON' }, 400, corsHeaders); }
+  if (data.removeId) {
+    await env.DB.prepare(`DELETE FROM locked_periods WHERE id = ?1`).bind(Number(data.removeId)).run();
+    return json({ ok: true, removed: Number(data.removeId) }, 200, corsHeaders);
+  }
+  const startDate = (data.startDate || '').toString().trim();
+  const endDate = (data.endDate || '').toString().trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return json({ ok: false, error: 'Invalid dates' }, 400, corsHeaders);
+  await env.DB.prepare(`INSERT INTO locked_periods (start_date, end_date, reason, locked_by) VALUES (?1, ?2, ?3, 'admin')`).bind(startDate, endDate, data.reason || null).run();
+  return json({ ok: true }, 200, corsHeaders);
+}
+
+async function handleTaxPrepReport(request, env, corsHeaders, url) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, url);
+  if (!auth.ok) return auth.res;
+  const year = (url.searchParams.get('year') || '').trim();
+  if (!/^\d{4}$/.test(year)) return json({ ok: false, error: 'Missing/invalid year' }, 400, corsHeaders);
+
+  const exp = await env.DB.prepare(`SELECT category, SUM(amount_cents) AS cents FROM tax_expenses WHERE substr(expense_date,1,4)=?1 GROUP BY category ORDER BY cents DESC`).bind(year).all();
+  const inc = await env.DB.prepare(`SELECT SUM(amount_cents) AS cents FROM tax_income WHERE substr(income_date,1,4)=?1 AND is_owner_funded = 0`).bind(year).first();
+  const deductions = Number((exp.results || []).reduce((a, r) => a + Number(r.cents || 0), 0));
+  const gross = Number(inc?.cents || 0);
+  const taxable = Math.max(0, gross - deductions);
+  const estQuarterly = Math.round((taxable * 0.25) / 4);
+  return json({ ok: true, year, grossIncomeCents: gross, deductibleCents: deductions, taxableBasisCents: taxable, estimatedQuarterlyTaxCents: estQuarterly, deductibleRollup: exp.results || [] }, 200, corsHeaders);
+}
+
+function mapScheduleC(category) {
+  const c = (category || '').toLowerCase();
+  if (c.includes('advert')) return 'Advertising';
+  if (c.includes('fee') || c.includes('processing')) return 'Commissions and Fees';
+  if (c.includes('software') || c.includes('saas') || c.includes('hosting')) return 'Office Expense';
+  if (c.includes('travel')) return 'Travel';
+  if (c.includes('meal')) return 'Meals';
+  if (c.includes('insurance')) return 'Insurance';
+  return 'Other Expenses';
+}
+
+async function handleTaxPrepExport(request, env, corsHeaders, url) {
+  if (!env.DB) return json({ ok: false, error: 'DB binding missing' }, 500, corsHeaders);
+  const auth = requireAdmin(request, env, corsHeaders, url);
+  if (!auth.ok) return auth.res;
+  const year = (url.searchParams.get('year') || '').trim();
+  const format = (url.searchParams.get('format') || 'json').trim().toLowerCase();
+  if (!/^\d{4}$/.test(year)) return json({ ok: false, error: 'Missing/invalid year' }, 400, corsHeaders);
+
+  const rows = await env.DB.prepare(`SELECT category, SUM(amount_cents) AS amount_cents FROM tax_expenses WHERE substr(expense_date,1,4)=?1 GROUP BY category ORDER BY category ASC`).bind(year).all();
+  const mapped = (rows.results || []).map(r => ({ year, category: r.category, scheduleCLine: mapScheduleC(r.category), amount_cents: Number(r.amount_cents || 0) }));
+
+  if (format === 'csv') {
+    const lines = ['year,category,schedule_c_line,amount'];
+    for (const r of mapped) lines.push([r.year, csvEscape(r.category), csvEscape(r.scheduleCLine), (r.amount_cents / 100).toFixed(2)].join(','));
+    return new Response(lines.join('\n'), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="tax-prep-${year}.csv"` } });
+  }
+  return json({ ok: true, year, rows: mapped }, 200, corsHeaders);
 }
 
 /**

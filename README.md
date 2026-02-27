@@ -7,6 +7,7 @@ Standalone admin panel sandbox extracted from `eastern-shore-ai`.
 - `admin.html` with login, booking controls, tax ledger, accounts, reconciliation, year-end close, audit package, and receipt upload UI
 - Cloudflare Worker backend (`worker/`) with matching API routes
 - D1 migrations for bookings + accounting/tax tables
+- Advanced accounting modules: bank feed import/reconciliation persistence, invoices + A/R aging, recurring templates/rules, close checklist + lock periods, and tax prep center exports
 - Receipt storage binding (R2)
 
 ## Safety intent
@@ -92,3 +93,16 @@ Redeploy after changes:
 ```bash
 cd worker && wrangler deploy
 ```
+
+## New API surface (advanced accounting)
+
+- Reconciliation: `/api/accounts/reconciliation/import`, `/api/accounts/reconciliation/list`, `/api/accounts/reconciliation/match`, `/api/accounts/reconciliation/summary`
+- Invoices + A/R: `/api/accounts/invoices` (GET/POST), `/api/accounts/invoices/status`, `/api/accounts/invoices/payment`, `/api/tax/ar-aging`
+- Recurring + rules: `/api/accounts/recurring` (GET/POST), `/api/accounts/recurring/apply`, `/api/accounts/rules` (GET/POST)
+- Close + locks: `/api/accounts/close-checklist` (GET/POST), `/api/accounts/lock-periods` (GET/POST)
+- Tax prep center: `/api/tax/prep/report`, `/api/tax/prep/export?format=json|csv`
+
+## Migration note
+
+This expansion adds a new migration file only: `worker/migrations/0011_add_advanced_accounting_features.sql`.
+Run migrations again (step 2) and deploy.
