@@ -194,6 +194,10 @@
           <button type="button" class="btn" data-admin-tab="tax">Tax Ledger</button>
           <button type="button" class="btn" data-admin-tab="accounts">Accounts</button>
           <button type="button" class="btn" data-admin-tab="reconciliation">Reconciliation</button>
+          <button type="button" class="btn" data-admin-tab="invoices">Invoices / A/R</button>
+          <button type="button" class="btn" data-admin-tab="recurring">Recurring</button>
+          <button type="button" class="btn" data-admin-tab="lock-periods">Close / Lock Periods</button>
+          <button type="button" class="btn" data-admin-tab="tax-prep">Tax Prep Center</button>
           <button type="button" class="btn" data-admin-tab="year-close">Year-End Close</button>
           <button type="button" class="btn" data-admin-tab="audit-package">Audit Package</button>
         </div>
@@ -447,6 +451,7 @@
         </div>
         <div id="advanced-accounting-body" class="admin-collapsible-body-collapsed">
           <section class="admin-calendar-wrap" style="margin-top:.5rem; grid-column:1 / -1;">
+            <div id="advanced-invoices-section">
             <div class="admin-row" style="gap:.5rem; flex-wrap:wrap; margin-bottom:.6rem;">
               <input id="invoice-customer-name" placeholder="Customer name" />
               <input id="invoice-due-date" type="date" />
@@ -455,7 +460,9 @@
               <button type="button" class="btn" id="invoice-refresh-btn">Refresh A/R Aging</button>
             </div>
             <div id="invoice-aging-summary" class="admin-list">No A/R aging data yet.</div>
+            </div>
 
+            <div id="advanced-recurring-section">
             <div class="admin-row" style="gap:.5rem; flex-wrap:wrap; margin:.8rem 0 .4rem;">
               <input id="recurring-name" placeholder="Recurring name" />
               <select id="recurring-type" style="max-width:120px;"><option value="expense">expense</option><option value="income">income</option></select>
@@ -466,7 +473,9 @@
               <button type="button" class="btn" id="recurring-apply-btn">Apply Due Now</button>
             </div>
             <div id="recurring-summary" class="admin-list">No recurring data yet.</div>
+            </div>
 
+            <div id="advanced-locks-section">
             <div class="admin-row" style="gap:.5rem; flex-wrap:wrap; margin:.8rem 0 .4rem;">
               <input id="lock-start-date" type="date" />
               <input id="lock-end-date" type="date" />
@@ -480,13 +489,16 @@
               <input id="checklist-item-label" placeholder="Checklist label" />
               <button type="button" class="btn" id="checklist-save-btn">Save Checklist Item</button>
             </div>
+            </div>
 
+            <div id="advanced-taxprep-section">
             <div class="admin-row" style="gap:.5rem; flex-wrap:wrap; margin:.8rem 0 .4rem;">
               <button type="button" class="btn" id="tax-prep-report-btn">Load Tax Prep Report</button>
               <button type="button" class="btn" id="tax-prep-export-json-btn">Export CPA JSON</button>
               <button type="button" class="btn" id="tax-prep-export-csv-btn">Export CPA CSV</button>
             </div>
             <div id="tax-prep-summary" class="admin-list">No tax prep report loaded.</div>
+            </div>
           </section>
         </div>
       </div>
@@ -859,6 +871,10 @@
     const reconMatchesEl = document.getElementById('recon-matches');
     const advancedAccountingCollapseBtn = document.getElementById('advanced-accounting-collapse-btn');
     const advancedAccountingBody = document.getElementById('advanced-accounting-body');
+    const advancedInvoicesSection = document.getElementById('advanced-invoices-section');
+    const advancedRecurringSection = document.getElementById('advanced-recurring-section');
+    const advancedLocksSection = document.getElementById('advanced-locks-section');
+    const advancedTaxPrepSection = document.getElementById('advanced-taxprep-section');
     const invoiceCustomerNameEl = document.getElementById('invoice-customer-name');
     const invoiceDueDateEl = document.getElementById('invoice-due-date');
     const invoiceAmountEl = document.getElementById('invoice-amount');
