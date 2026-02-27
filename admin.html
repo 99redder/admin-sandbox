@@ -728,10 +728,54 @@
       <div id="user-guide-panel-statements" data-guide-panel="statements" style="display:none; color:var(--text);">
         <img src="./images/admin-guide-statements.svg" alt="Guide diagram for trial balance, statements, and journal tabs" style="width:100%; border:1px solid var(--line); border-radius:6px; background:var(--bg);" />
         <ul style="margin:.7rem 0 0 1.1rem; padding:0; display:grid; gap:.28rem;">
-          <li>Trial Balance should remain balanced.</li>
-          <li>Use Balance Sheet + P&L for management and tax prep snapshots.</li>
-          <li>Use Journal for line-level verification when numbers look off.</li>
+          <li>Start in Trial Balance and confirm Debits = Credits.</li>
+          <li>Use Balance Sheet for position and P&L for performance.</li>
+          <li>Use Journal to trace totals back to source entries.</li>
         </ul>
+      </div>
+
+      <div id="user-guide-panel-invoices" data-guide-panel="invoices" style="display:none; color:var(--text);">
+        <h4 style="margin:.1rem 0 .4rem;">Invoices + A/R Aging</h4>
+        <ol style="margin:.4rem 0 0 1.1rem; padding:0; display:grid; gap:.3rem;">
+          <li>Open <strong>Invoices / A/R</strong> tab.</li>
+          <li>Enter customer name, due date, and amount; click <strong>Quick Invoice</strong>.</li>
+          <li>Click <strong>Refresh A/R Aging</strong> to update aging buckets.</li>
+          <li>Review 31+ day balances weekly and follow up promptly.</li>
+          <li>Record payment when received so A/R and reports stay accurate.</li>
+        </ol>
+      </div>
+
+      <div id="user-guide-panel-recurring" data-guide-panel="recurring" style="display:none; color:var(--text);">
+        <h4 style="margin:.1rem 0 .4rem;">Recurring Transactions + Rules</h4>
+        <ol style="margin:.4rem 0 0 1.1rem; padding:0; display:grid; gap:.3rem;">
+          <li>Open <strong>Recurring</strong> tab.</li>
+          <li>Create template with type, next date, amount cents, and category.</li>
+          <li>Save each repeating item (subscriptions, retainers, etc.).</li>
+          <li>Click <strong>Apply Due Now</strong> during close to post due entries.</li>
+          <li>Verify new entries in Tax Ledger and Journal views.</li>
+        </ol>
+      </div>
+
+      <div id="user-guide-panel-close-lock" data-guide-panel="close-lock" style="display:none; color:var(--text);">
+        <h4 style="margin:.1rem 0 .4rem;">Close Checklist + Lock Periods</h4>
+        <ol style="margin:.4rem 0 0 1.1rem; padding:0; display:grid; gap:.3rem;">
+          <li>Open <strong>Close / Lock Periods</strong> tab.</li>
+          <li>Add checklist items (recon complete, receipts complete, etc.).</li>
+          <li>After review, set lock start/end and click <strong>Lock Period</strong>.</li>
+          <li>Locked dates block write operations to protect closed books.</li>
+          <li>Unlock only when necessary and document why.</li>
+        </ol>
+      </div>
+
+      <div id="user-guide-panel-tax-prep" data-guide-panel="tax-prep" style="display:none; color:var(--text);">
+        <h4 style="margin:.1rem 0 .4rem;">Tax Prep Center</h4>
+        <ol style="margin:.4rem 0 0 1.1rem; padding:0; display:grid; gap:.3rem;">
+          <li>Open <strong>Tax Prep Center</strong> tab and load the report.</li>
+          <li>Review gross income, deductions, taxable basis, and quarterly estimate.</li>
+          <li>Export CPA package as JSON/CSV for accountant handoff.</li>
+          <li>Re-run exports after any backdated or corrected entries.</li>
+          <li>Use export outputs as the authoritative filing snapshot.</li>
+        </ol>
       </div>
 
       <div class="form-actions" style="margin-top:1rem;">
