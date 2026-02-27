@@ -2625,8 +2625,16 @@
       show('booking-controls-card', tab === 'booking');
       show('tax-ledger-card', tab === 'tax');
       show('accounts-card', tab === 'accounts');
-      show('advanced-accounting-card', tab === 'accounts');
       show('reconciliation-card', tab === 'reconciliation');
+
+      const advancedTabs = ['invoices', 'recurring', 'lock-periods', 'tax-prep'];
+      const showAdvanced = advancedTabs.includes(tab);
+      show('advanced-accounting-card', showAdvanced);
+      if (advancedInvoicesSection) advancedInvoicesSection.style.display = tab === 'invoices' ? '' : 'none';
+      if (advancedRecurringSection) advancedRecurringSection.style.display = tab === 'recurring' ? '' : 'none';
+      if (advancedLocksSection) advancedLocksSection.style.display = tab === 'lock-periods' ? '' : 'none';
+      if (advancedTaxPrepSection) advancedTaxPrepSection.style.display = tab === 'tax-prep' ? '' : 'none';
+
       show('year-close-card', tab === 'year-close');
       show('audit-package-card', tab === 'audit-package');
     }
