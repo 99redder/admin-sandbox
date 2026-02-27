@@ -96,6 +96,11 @@
     .admin-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
     .admin-list { max-height:520px; overflow:auto; border:1px solid var(--line); border-radius:2px; padding:.4rem; background:var(--bg2); font-size:1rem; color:var(--muted); }
     .admin-row { display:flex; }
+    .invoice-filter-btn.active { background:linear-gradient(145deg,var(--accent),var(--accent-strong)); border-color:var(--accent); color:#fff; }
+    .invoice-table { width:100%; border-collapse:collapse; font-size:.95rem; color:var(--text); }
+    .invoice-table th, .invoice-table td { border-bottom:1px dashed var(--line); padding:.45rem .35rem; text-align:left; vertical-align:top; }
+    .invoice-table th { color:var(--muted); font-weight:600; position:sticky; top:0; background:var(--bg2); z-index:1; }
+    .invoice-table td .admin-row { gap:.35rem; flex-wrap:wrap; }
 
     /* ===== Tax Ledger ===== */
     .tax-row { display:grid; grid-template-columns:auto 1fr auto auto; gap:.45rem; align-items:center; padding:.55rem .5rem; border-bottom:1px dashed var(--line); gap:.6rem; }
@@ -460,6 +465,12 @@
               <button type="button" class="btn" id="invoice-refresh-btn">Refresh A/R Aging</button>
             </div>
             <div id="invoice-aging-summary" class="admin-list">No A/R aging data yet.</div>
+            <div class="admin-row" style="gap:.45rem; flex-wrap:wrap; margin:.65rem 0 .45rem;">
+              <button type="button" class="btn invoice-filter-btn active" data-invoice-filter="all">All</button>
+              <button type="button" class="btn invoice-filter-btn" data-invoice-filter="open">Open</button>
+              <button type="button" class="btn invoice-filter-btn" data-invoice-filter="paid">Paid</button>
+            </div>
+            <div id="invoice-list-panel" class="admin-list">No invoices loaded yet.</div>
             </div>
 
             <div id="advanced-recurring-section">
@@ -739,9 +750,10 @@
         <ol style="margin:.4rem 0 0 1.1rem; padding:0; display:grid; gap:.3rem;">
           <li>Open <strong>Invoices / A/R</strong> tab.</li>
           <li>Enter customer name, due date, and amount; click <strong>Quick Invoice</strong>.</li>
-          <li>Click <strong>Refresh A/R Aging</strong> to update aging buckets.</li>
-          <li>Review 31+ day balances weekly and follow up promptly.</li>
-          <li>Record payment when received so A/R and reports stay accurate.</li>
+          <li>Use <strong>Refresh A/R Aging</strong> to reload the aging buckets and invoice list together.</li>
+          <li>Review invoices in the list panel below aging (invoice #, customer, dates, status, total, paid, balance).</li>
+          <li>Filter invoices with <strong>All / Open / Paid</strong> as needed.</li>
+          <li>Use row actions to <strong>Mark Sent</strong>, <strong>Mark Paid</strong>, or <strong>Record Payment</strong> for partial receipts.</li>
         </ol>
       </div>
 
@@ -929,6 +941,8 @@
     const invoiceCreateBtn = document.getElementById('invoice-create-btn');
     const invoiceRefreshBtn = document.getElementById('invoice-refresh-btn');
     const invoiceAgingSummaryEl = document.getElementById('invoice-aging-summary');
+    const invoiceListPanelEl = document.getElementById('invoice-list-panel');
+    const invoiceFilterBtns = document.querySelectorAll('[data-invoice-filter]');
     const recurringNameEl = document.getElementById('recurring-name');
     const recurringTypeEl = document.getElementById('recurring-type');
     const recurringNextDateEl = document.getElementById('recurring-next-date');
@@ -1026,6 +1040,7 @@
     let editingIncomeId = null;
     let activeAccountsTab = 'balances';
     let activeAdminSectionTab = 'booking';
+    let activeInvoiceFilter = 'all';
     let blurMoneyEnabled = false;
 
     // ===== Time Slots =====
@@ -2382,15 +2397,123 @@
       const data = await res.json();
       if (!res.ok) { openErrorModal(data.error || 'Failed to create invoice'); return; }
       openSuccessModal('Invoice created', `Invoice #${data.invoiceId} created.`);
-      await refreshArAging();
+      await refreshInvoicePanel();
+    }
+
+    function normalizeInvoiceStatus(status) {
+      const raw = (status || '').toString().toLowerCase();
+      if (raw === 'paid') return 'paid';
+      if (raw === 'open') return 'sent';
+      return raw || 'draft';
+    }
+
+    function invoiceFilterToApiStatus(filter) {
+      if (filter === 'paid') return 'paid';
+      return '';
+    }
+
+    function moneyCents(v) {
+      return `$${(Number(v || 0) / 100).toFixed(2)}`;
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(`${iso}T00:00:00`);
+      return Number.isNaN(d.getTime()) ? escHtml(iso) : d.toLocaleDateString();
+    }
+
+    function setInvoiceFilter(filter) {
+      activeInvoiceFilter = ['all','open','paid'].includes(filter) ? filter : 'all';
+      invoiceFilterBtns.forEach((btn) => btn.classList.toggle('active', btn.getAttribute('data-invoice-filter') === activeInvoiceFilter));
+      if (adminUnlocked) refreshInvoicePanel();
+    }
+
+    function renderInvoiceRows(invoices = []) {
+      if (!invoiceListPanelEl) return;
+      if (!invoices.length) {
+        invoiceListPanelEl.innerHTML = '<div style="color:var(--muted);">No invoices found for this filter.</div>';
+        return;
+      }
+      invoiceListPanelEl.innerHTML = `<table class="invoice-table">
+        <thead><tr><th>#</th><th>Customer</th><th>Issue</th><th>Due</th><th>Status</th><th>Total</th><th>Paid</th><th>Balance</th><th>Actions</th></tr></thead>
+        <tbody>${invoices.map((inv) => {
+          const status = normalizeInvoiceStatus(inv.status);
+          const canMarkSent = !['sent','partial','paid','void'].includes(status);
+          const canMarkPaid = status !== 'paid' && Number(inv.balance_due_cents || 0) > 0;
+          return `<tr>
+            <td>${escHtml(inv.invoice_number || `INV-${inv.id || ''}`)}</td>
+            <td>${escHtml(inv.customer_name || '—')}</td>
+            <td>${escHtml(fmtDate(inv.issue_date))}</td>
+            <td>${escHtml(fmtDate(inv.due_date))}</td>
+            <td style="text-transform:capitalize;">${escHtml(status)}</td>
+            <td>${moneyCents(inv.total_cents)}</td>
+            <td>${moneyCents(inv.amount_paid_cents)}</td>
+            <td>${moneyCents(inv.balance_due_cents)}</td>
+            <td>
+              <div class="admin-row">
+                <button type="button" class="btn" data-invoice-action="sent" data-invoice-id="${Number(inv.id||0)}" ${canMarkSent ? '' : 'disabled'}>Mark Sent</button>
+                <button type="button" class="btn" data-invoice-action="paid" data-invoice-id="${Number(inv.id||0)}" ${canMarkPaid ? '' : 'disabled'}>Mark Paid</button>
+                <button type="button" class="btn" data-invoice-action="partial" data-invoice-id="${Number(inv.id||0)}" ${canMarkPaid ? '' : 'disabled'}>Record Payment</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+      markMoneyBlurTargets();
+    }
+
+    async function refreshInvoiceList() {
+      if (!invoiceListPanelEl) return;
+      const status = invoiceFilterToApiStatus(activeInvoiceFilter);
+      const url = status ? `${INVOICES_API_URL}?status=${encodeURIComponent(status)}` : INVOICES_API_URL;
+      const res = await fetch(url, { headers: { 'X-Admin-Password': adminPassword } });
+      const data = await res.json();
+      if (!res.ok) { openErrorModal(data.error || 'Failed to load invoices'); return; }
+      let invoices = Array.isArray(data.invoices) ? data.invoices : [];
+      if (activeInvoiceFilter === 'open') invoices = invoices.filter((inv) => ['sent','partial'].includes(normalizeInvoiceStatus(inv.status)));
+      renderInvoiceRows(invoices);
     }
 
     async function refreshArAging() {
       const res = await fetch(`${AR_AGING_API_URL}?asOf=${encodeURIComponent(new Date().toISOString().slice(0,10))}`, { headers: { 'X-Admin-Password': adminPassword } });
       const data = await res.json();
-      if (!res.ok) { openErrorModal(data.error || 'Failed to load AR aging'); return; }
+      if (!res.ok) { openErrorModal(data.error || 'Failed to load AR aging'); return false; }
       const b = data.buckets || {};
       invoiceAgingSummaryEl.innerHTML = `<div><strong>A/R Aging</strong> — 0-30: $${((b['0-30']||0)/100).toFixed(2)} | 31-60: $${((b['31-60']||0)/100).toFixed(2)} | 61-90: $${((b['61-90']||0)/100).toFixed(2)} | 90+: $${((b['90+']||0)/100).toFixed(2)}</div>`;
+      markMoneyBlurTargets();
+      return true;
+    }
+
+    async function refreshInvoicePanel() {
+      await Promise.all([refreshArAging(), refreshInvoiceList()]);
+    }
+
+    async function updateInvoiceStatus(id, status) {
+      const normalized = normalizeInvoiceStatus(status);
+      const res = await fetch(INVOICE_STATUS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({ id, status: normalized })
+      });
+      const data = await res.json();
+      if (!res.ok) { openErrorModal(data.error || 'Failed to update invoice status'); return; }
+      await refreshInvoicePanel();
+    }
+
+    async function recordInvoicePayment(id) {
+      const raw = window.prompt('Enter payment amount (e.g. 125.00):', '');
+      if (raw == null) return;
+      const amount = Number(raw);
+      if (!Number.isFinite(amount) || amount <= 0) { openErrorModal('Enter a valid payment amount greater than 0.'); return; }
+      const paymentCents = Math.round(amount * 100);
+      const res = await fetch(INVOICE_PAYMENT_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({ id, paymentCents })
+      });
+      const data = await res.json();
+      if (!res.ok) { openErrorModal(data.error || 'Failed to record invoice payment'); return; }
+      await refreshInvoicePanel();
     }
 
     async function saveRecurringTemplate() {
@@ -2634,6 +2757,7 @@
       if (advancedRecurringSection) advancedRecurringSection.style.display = tab === 'recurring' ? '' : 'none';
       if (advancedLocksSection) advancedLocksSection.style.display = tab === 'lock-periods' ? '' : 'none';
       if (advancedTaxPrepSection) advancedTaxPrepSection.style.display = tab === 'tax-prep' ? '' : 'none';
+      if (tab === 'invoices' && adminUnlocked) refreshInvoicePanel();
 
       show('year-close-card', tab === 'year-close');
       show('audit-package-card', tab === 'audit-package');
@@ -2675,7 +2799,7 @@
         await loadAdminData();
         await loadTaxTransactions();
         await loadAccountsData();
-        await refreshArAging();
+        await refreshInvoicePanel();
         await refreshRecurringSummary();
         await refreshLocksAndChecklist();
       } catch (e) {
@@ -2838,7 +2962,18 @@
     auditPackageBtn?.addEventListener('click', openAuditPackageModal);
     reconRunBtn?.addEventListener('click', runReconciliation);
     invoiceCreateBtn?.addEventListener('click', createQuickInvoice);
-    invoiceRefreshBtn?.addEventListener('click', refreshArAging);
+    invoiceRefreshBtn?.addEventListener('click', refreshInvoicePanel);
+    invoiceFilterBtns.forEach((btn) => btn.addEventListener('click', () => setInvoiceFilter(btn.getAttribute('data-invoice-filter'))));
+    invoiceListPanelEl?.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-invoice-action]');
+      if (!btn) return;
+      const id = Number(btn.getAttribute('data-invoice-id') || 0);
+      const action = btn.getAttribute('data-invoice-action');
+      if (!id || !action) return;
+      if (action === 'partial') await recordInvoicePayment(id);
+      else if (action === 'paid') await updateInvoiceStatus(id, 'paid');
+      else if (action === 'sent') await updateInvoiceStatus(id, 'sent');
+    });
     recurringSaveBtn?.addEventListener('click', saveRecurringTemplate);
     recurringApplyBtn?.addEventListener('click', applyRecurringNow);
     lockAddBtn?.addEventListener('click', addLockPeriod);
